@@ -39,24 +39,57 @@ export interface AnalyticsEvent {
 
 export const getUTMParams = (): UTMParams => {
   const params = new URLSearchParams(window.location.search);
-  return {
-    utm_source: params.get('utm_source') || undefined,
-    utm_medium: params.get('utm_medium') || undefined,
-    utm_campaign: params.get('utm_campaign') || undefined,
-    utm_term: params.get('utm_term') || undefined,
-    utm_content: params.get('utm_content') || undefined,
-    utm_id: params.get('utm_id') || undefined,
-    utm_source_platform: params.get('utm_source_platform') || undefined,
-    gclid: params.get('gclid') || undefined,
-    fbclid: params.get('fbclid') || undefined,
-    msclkid: params.get('msclkid') || undefined,
-    ttclid: params.get('ttclid') || undefined,
-    yclid: params.get('yclid') || undefined,
-    gbraid: params.get('gbraid') || undefined,
-    wbraid: params.get('wbraid') || undefined,
-    _ga: params.get('_ga') || undefined,
-    mc_eid: params.get('mc_eid') || undefined,
-  };
+  const result: UTMParams = {};
+  
+  const utm_source = params.get('utm_source');
+  if (utm_source) result.utm_source = utm_source;
+  
+  const utm_medium = params.get('utm_medium');
+  if (utm_medium) result.utm_medium = utm_medium;
+  
+  const utm_campaign = params.get('utm_campaign');
+  if (utm_campaign) result.utm_campaign = utm_campaign;
+  
+  const utm_term = params.get('utm_term');
+  if (utm_term) result.utm_term = utm_term;
+  
+  const utm_content = params.get('utm_content');
+  if (utm_content) result.utm_content = utm_content;
+  
+  const utm_id = params.get('utm_id');
+  if (utm_id) result.utm_id = utm_id;
+  
+  const utm_source_platform = params.get('utm_source_platform');
+  if (utm_source_platform) result.utm_source_platform = utm_source_platform;
+  
+  const gclid = params.get('gclid');
+  if (gclid) result.gclid = gclid;
+  
+  const fbclid = params.get('fbclid');
+  if (fbclid) result.fbclid = fbclid;
+  
+  const msclkid = params.get('msclkid');
+  if (msclkid) result.msclkid = msclkid;
+  
+  const ttclid = params.get('ttclid');
+  if (ttclid) result.ttclid = ttclid;
+  
+  const yclid = params.get('yclid');
+  if (yclid) result.yclid = yclid;
+  
+  const gbraid = params.get('gbraid');
+  if (gbraid) result.gbraid = gbraid;
+  
+  const wbraid = params.get('wbraid');
+  if (wbraid) result.wbraid = wbraid;
+  
+  const _ga = params.get('_ga');
+  if (_ga) result._ga = _ga;
+  
+  const mc_eid = params.get('mc_eid');
+  if (mc_eid) result.mc_eid = mc_eid;
+  
+  return result;
 };
 
 let realIP: string | undefined;
@@ -75,7 +108,7 @@ let realIP: string | undefined;
 })();
 
 export const getUserData = (): UserData => {
-  return {
+  const result: UserData = {
     userAgent: navigator.userAgent,
     language: navigator.language,
     platform: navigator.platform,
@@ -83,8 +116,13 @@ export const getUserData = (): UserData => {
     screenHeight: window.screen.height,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     timestamp: new Date().toISOString(),
-    realIP,
   };
+  
+  if (realIP) {
+    result.realIP = realIP;
+  }
+  
+  return result;
 };
 
 export const logEvent = async (event: string, data?: Record<string, any>): Promise<void> => {
@@ -94,8 +132,11 @@ export const logEvent = async (event: string, data?: Record<string, any>): Promi
     utmParams: getUTMParams(),
     pageUrl: window.location.href,
     referrer: document.referrer,
-    data,
   };
+  
+  if (data) {
+    analyticsEvent.data = data;
+  }
 
   console.log('Analytics Event:', analyticsEvent);
 

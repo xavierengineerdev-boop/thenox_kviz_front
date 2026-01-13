@@ -1,5 +1,5 @@
 import React from 'react';
-import { RadioOption } from '../types';
+import { RadioOption } from '../../types';
 import './RadioButton.css';
 
 interface RadioButtonProps {
