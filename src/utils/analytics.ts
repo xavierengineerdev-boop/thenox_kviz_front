@@ -157,10 +157,30 @@ export const logEvent = async (event: string, data?: Record<string, any>): Promi
     });
 
     if (!response.ok) {
-      console.warn('Failed to send analytics event to server');
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        console.warn('Failed to send analytics event to server', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+        });
+      } else {
+        console.warn('Failed to send analytics event to server', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType,
+        });
+      }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending analytics event:', error);
+    if (error.message) {
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+      });
+    }
   }
 };
 
@@ -200,7 +220,23 @@ export const logQuizComplete = async (formData: Record<string, any>): Promise<vo
 
     console.log('Response status:', response.status, response.statusText);
 
-    const responseData = await response.json();
+    // Проверяем тип контента перед парсингом JSON
+    const contentType = response.headers.get('content-type');
+    let responseData: any;
+    
+    if (contentType && contentType.includes('application/json')) {
+      responseData = await response.json();
+    } else {
+      // Если ответ не JSON, читаем как текст для диагностики
+      const textResponse = await response.text();
+      console.error('Server returned non-JSON response:', {
+        status: response.status,
+        statusText: response.statusText,
+        contentType,
+        responsePreview: textResponse.substring(0, 200),
+      });
+      throw new Error(`Server returned ${response.status} ${response.statusText}. Expected JSON but got ${contentType || 'unknown'}`);
+    }
 
     if (response.ok) {
       console.log('Lead sent successfully', responseData);
@@ -216,11 +252,18 @@ export const logQuizComplete = async (formData: Record<string, any>): Promise<vo
     }
   } catch (error: any) {
     console.error('Error sending lead:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    });
+    if (error.message) {
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+      });
+    } else {
+      console.error('Error details:', {
+        message: error.message || 'Unknown error',
+        stack: error.stack,
+        name: error.name,
+      });
+    }
   }
 };
 
