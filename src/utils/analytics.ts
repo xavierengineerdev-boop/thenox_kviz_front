@@ -138,16 +138,17 @@ export const logEvent = async (event: string, data?: Record<string, any>): Promi
     analyticsEvent.data = data;
   }
 
-  console.log('Analytics Event:', analyticsEvent);
-
+  // Сохраняем события только в localStorage, без отправки на сервер
   if (localStorage) {
     const events = JSON.parse(localStorage.getItem('analytics_events') || '[]');
     events.push(analyticsEvent);
     localStorage.setItem('analytics_events', JSON.stringify(events));
   }
 
+  // Отправка на сервер отключена, чтобы избежать ошибок 404
+  // Если нужно включить, раскомментируйте код ниже
+  /*
   try {
-    // В продакшене используем относительный путь, в разработке - полный URL
     const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:3001');
     const response = await fetch(`${API_URL}/api/analytics/event`, {
       method: 'POST',
@@ -158,31 +159,12 @@ export const logEvent = async (event: string, data?: Record<string, any>): Promi
     });
 
     if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const errorData = await response.json();
-        console.warn('Failed to send analytics event to server', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData,
-        });
-      } else {
-        console.warn('Failed to send analytics event to server', {
-          status: response.status,
-          statusText: response.statusText,
-          contentType,
-        });
-      }
+      // Тихий режим - не логируем ошибки
     }
-  } catch (error: any) {
-    console.error('Error sending analytics event:', error);
-    if (error.message) {
-      console.error('Error details:', {
-        message: error.message,
-        name: error.name,
-      });
-    }
+  } catch (error) {
+    // Тихий режим - не логируем ошибки
   }
+  */
 };
 
 export const logPageView = (): void => {
@@ -209,9 +191,6 @@ export const logQuizComplete = async (formData: Record<string, any>): Promise<vo
       userData: getUserData(),
     };
 
-    console.log('Sending lead to:', `${API_URL}/api/lead`);
-    console.log('Lead data:', requestData);
-
     const response = await fetch(`${API_URL}/api/lead`, {
       method: 'POST',
       headers: {
@@ -219,8 +198,6 @@ export const logQuizComplete = async (formData: Record<string, any>): Promise<vo
       },
       body: JSON.stringify(requestData),
     });
-
-    console.log('Response status:', response.status, response.statusText);
 
     // Проверяем тип контента перед парсингом JSON
     const contentType = response.headers.get('content-type');
@@ -231,41 +208,31 @@ export const logQuizComplete = async (formData: Record<string, any>): Promise<vo
     } else {
       // Если ответ не JSON, читаем как текст для диагностики
       const textResponse = await response.text();
-      console.error('Server returned non-JSON response:', {
+      // Тихий режим - не показываем ошибки пользователю, только логируем
+      console.warn('Server returned non-JSON response for lead:', {
         status: response.status,
         statusText: response.statusText,
         contentType,
-        responsePreview: textResponse.substring(0, 200),
       });
-      throw new Error(`Server returned ${response.status} ${response.statusText}. Expected JSON but got ${contentType || 'unknown'}`);
+      return; // Выходим без ошибки
     }
 
     if (response.ok) {
-      console.log('Lead sent successfully', responseData);
+      console.log('Lead sent successfully');
       if (!responseData.telegramSent) {
         console.warn('Lead was saved but failed to send to Telegram bot');
       }
     } else {
-      console.error('Failed to send lead to server', {
+      // Тихий режим - не показываем ошибки пользователю
+      console.warn('Failed to send lead to server', {
         status: response.status,
         statusText: response.statusText,
-        error: responseData,
       });
     }
   } catch (error: any) {
-    console.error('Error sending lead:', error);
-    if (error.message) {
-      console.error('Error details:', {
-        message: error.message,
-        name: error.name,
-      });
-    } else {
-      console.error('Error details:', {
-        message: error.message || 'Unknown error',
-        stack: error.stack,
-        name: error.name,
-      });
-    }
+    // Тихий режим - не показываем ошибки пользователю
+    // Логи сохраняются в localStorage, можно отправить позже
+    console.warn('Error sending lead (silent mode)');
   }
 };
 
