@@ -206,8 +206,8 @@ export const logQuizComplete = async (formData: Record<string, any>): Promise<vo
     if (contentType && contentType.includes('application/json')) {
       responseData = await response.json();
     } else {
-      // Если ответ не JSON, читаем как текст для диагностики
-      const textResponse = await response.text();
+      // Если ответ не JSON, читаем как текст для диагностики (но не используем)
+      await response.text();
       // Тихий режим - не показываем ошибки пользователю, только логируем
       console.warn('Server returned non-JSON response for lead:', {
         status: response.status,
