@@ -147,7 +147,8 @@ export const logEvent = async (event: string, data?: Record<string, any>): Promi
   }
 
   try {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    // В продакшене используем относительный путь, в разработке - полный URL
+    const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:3001');
     const response = await fetch(`${API_URL}/api/analytics/event`, {
       method: 'POST',
       headers: {
@@ -200,7 +201,8 @@ export const logQuizComplete = async (formData: Record<string, any>): Promise<vo
   await logEvent('quiz_complete', formData);
 
   try {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    // В продакшене используем относительный путь, в разработке - полный URL
+    const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:3001');
     const requestData = {
       lead: formData,
       utmParams: getUTMParams(),
