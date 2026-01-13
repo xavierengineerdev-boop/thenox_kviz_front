@@ -1,0 +1,36 @@
+.progress-bar {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 40px;
+}
+
+.progress-bar__segment {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+.progress-bar__segment--active {
+  background: #b4ff00;
+}
+
+@media (max-width: 768px) {
+  .progress-bar {
+    margin-bottom: 20px;
+    gap: 5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-bar {
+    margin-bottom: 16px;
+    gap: 4px;
+  }
+
+  .progress-bar__segment {
+    height: 3px;
+  }
+}
