@@ -45,42 +45,48 @@ export const QuizSlider: React.FC = () => {
 
   // Валидация телефона в реальном времени
   useEffect(() => {
-    if (slideIndex === 3) {
-      // Если нет кода страны или номера, не показываем ошибку (пользователь еще вводит)
-      if (!data.phoneCode && !data.phone.trim()) {
-        setPhoneError('');
-        return;
-      }
+    // Валидируем только на слайде с контактами
+    if (slideIndex !== 3) {
+      setPhoneError('');
+      return;
+    }
 
-      // Если есть код страны, но нет номера - не показываем ошибку пока пользователь вводит
-      if (data.phoneCode && !data.phone.trim()) {
-        setPhoneError('');
-        return;
-      }
+    const phoneTrimmed = data.phone.trim();
+    const hasCode = !!data.phoneCode;
+    const hasNumber = !!phoneTrimmed;
 
-      // Если есть номер, но нет кода страны - показываем ошибку
-      if (data.phone.trim() && !data.phoneCode) {
-        setPhoneError(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
-        return;
-      }
+    // Если нет ни кода, ни номера - не показываем ошибку (пользователь еще вводит)
+    if (!hasCode && !hasNumber) {
+      setPhoneError('');
+      return;
+    }
 
-      // Если есть и код, и номер - валидируем
-      if (data.phoneCode && data.phone.trim()) {
-        try {
-          const fullPhone = `${data.phoneCode}${data.phone}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
-          const parsedPhone = parsePhoneNumber(fullPhone);
-          
-          if (!parsedPhone || !parsedPhone.isValid()) {
-            setPhoneError(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
-          } else {
-            setPhoneError('');
-          }
-        } catch (error) {
+    // Если есть код, но нет номера - не показываем ошибку пока пользователь вводит
+    if (hasCode && !hasNumber) {
+      setPhoneError('');
+      return;
+    }
+
+    // Если есть номер, но нет кода страны - показываем ошибку
+    if (hasNumber && !hasCode) {
+      setPhoneError(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
+      return;
+    }
+
+    // Если есть и код, и номер - валидируем полный номер
+    if (hasCode && hasNumber) {
+      try {
+        const fullPhone = `${data.phoneCode}${phoneTrimmed}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
+        const parsedPhone = parsePhoneNumber(fullPhone);
+        
+        if (parsedPhone && parsedPhone.isValid()) {
+          setPhoneError('');
+        } else {
           setPhoneError(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
         }
+      } catch (error) {
+        setPhoneError(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
       }
-    } else {
-      setPhoneError('');
     }
   }, [data.phone, data.phoneCode, slideIndex, t]);
 
@@ -91,33 +97,39 @@ export const QuizSlider: React.FC = () => {
 
     if (slideIndex === 3) {
       const newErrors: string[] = [];
-      if (!data.name.trim()) newErrors.push(t.quiz.contact.errors.name);
       
-      // Валидация телефона с использованием parsePhoneNumber
-      if (!data.phoneCode || !data.phone.trim()) {
+      // Валидация имени
+      if (!data.name.trim()) {
+        newErrors.push(t.quiz.contact.errors.name);
+      }
+      
+      // Валидация телефона
+      const phoneTrimmed = data.phone.trim();
+      if (!data.phoneCode || !phoneTrimmed) {
         newErrors.push(t.quiz.contact.errors.phone);
       } else {
         try {
-          // Форматируем телефон: убираем все пробелы и нецифровые символы кроме +
-          const fullPhone = `${data.phoneCode}${data.phone}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
+          const fullPhone = `${data.phoneCode}${phoneTrimmed}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
           const parsedPhone = parsePhoneNumber(fullPhone);
           
           if (!parsedPhone || !parsedPhone.isValid()) {
             newErrors.push(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
           }
         } catch (error) {
-          // Если не удалось распарсить номер, считаем его невалидным
           newErrors.push(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
         }
       }
 
-      // Если есть ошибка телефона из валидации в реальном времени, добавляем её в общий список
+      // Добавляем ошибку из валидации в реальном времени, если она есть
       if (phoneError && !newErrors.includes(phoneError)) {
         newErrors.push(phoneError);
       }
       
-      if (!data.email.trim() || !data.email.includes('@'))
+      // Валидация email
+      const emailTrimmed = data.email.trim();
+      if (!emailTrimmed || !emailTrimmed.includes('@')) {
         newErrors.push(t.quiz.contact.errors.email);
+      }
 
       if (newErrors.length > 0) {
         setErrors(newErrors);
@@ -127,33 +139,20 @@ export const QuizSlider: React.FC = () => {
       setErrors([]);
       setPhoneError('');
 
-      // Форматируем телефон для отправки: используем parsePhoneNumber для правильного формата
+      // Форматируем телефон для отправки в формате E.164
       let formattedPhone = '';
       try {
-        const fullPhone = `${data.phoneCode}${data.phone}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
+        const fullPhone = `${data.phoneCode}${data.phone.trim()}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
         const parsedPhone = parsePhoneNumber(fullPhone);
+        
         if (parsedPhone && parsedPhone.isValid()) {
-          // Используем E.164 формат (международный формат)
           formattedPhone = parsedPhone.format('E.164');
         } else {
-          // Если не удалось распарсить, используем простое форматирование
           formattedPhone = fullPhone;
         }
       } catch (error) {
-        // При ошибке используем простое форматирование
-        formattedPhone = `${data.phoneCode}${data.phone}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
+        formattedPhone = `${data.phoneCode}${data.phone.trim()}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
       }
-      
-      console.log('Form data before sending:', {
-        name: data.name,
-        phone: formattedPhone,
-        phoneCode: data.phoneCode,
-        phoneNumber: data.phone,
-        email: data.email,
-        capital: data.capital,
-        motivation: data.motivation,
-        readiness: data.readiness,
-      });
       
       // Отправляем данные асинхронно, но не блокируем UI
       logQuizComplete({

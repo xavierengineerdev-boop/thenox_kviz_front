@@ -189,71 +189,19 @@ select.PhoneInputCountrySelect option:checked,
   color: #b4ff00 !important;
 }
 
-/* Старые стили для обратной совместимости */
-.phone-input__code {
-  padding: 18px 16px;
-  font-size: 16px;
-  background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50px;
-  color: #fff;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  width: 120px;
-}
-
-.phone-input__code:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.phone-input__code:focus {
-  outline: none;
-  border-color: #b4ff00;
-  box-shadow: 0 0 0 3px rgba(180, 255, 0, 0.1);
-}
-
-.phone-input__code option {
-  background: #1a1a1a;
-  color: #fff;
-}
-
-.phone-input__number {
-  flex: 1;
-  padding: 18px 24px;
-  font-size: 16px;
-  background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50px;
-  color: #fff;
-  transition: all 0.3s ease;
-}
-
-.phone-input__number::placeholder {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.phone-input__number:focus {
-  outline: none;
-  border-color: #b4ff00;
-  box-shadow: 0 0 0 3px rgba(180, 255, 0, 0.1);
-}
-
-.phone-input__number:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
+/* Адаптивные стили */
 @media (max-width: 768px) {
   .phone-input {
     gap: 10px;
   }
 
-  .phone-input__code {
-    width: 100px;
+  .phone-input__react-phone .PhoneInputCountry {
+    min-width: 100px;
     padding: 16px 12px;
     font-size: 15px;
   }
 
-  .phone-input__number {
+  .phone-input__react-phone .PhoneInputInput {
     padding: 16px 20px;
     font-size: 15px;
   }
@@ -264,13 +212,13 @@ select.PhoneInputCountrySelect option:checked,
     gap: 8px;
   }
 
-  .phone-input__code {
-    width: 75px;
+  .phone-input__react-phone .PhoneInputCountry {
+    min-width: 75px;
     padding: 12px 8px;
     font-size: 13px;
   }
 
-  .phone-input__number {
+  .phone-input__react-phone .PhoneInputInput {
     padding: 12px 16px;
     font-size: 13px;
   }

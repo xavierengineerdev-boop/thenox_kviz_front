@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import PhoneInputWithCountry, { parsePhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import './PhoneInput.css';
@@ -21,8 +21,11 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   onPhoneNumberChange,
   error,
 }) => {
-  // Используем полный номер телефона для библиотеки (она сама форматирует)
-  const getFullPhoneValue = (): string => {
+  const isInternalUpdate = useRef(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  
+  // Формируем полный номер телефона для библиотеки
+  const getFullPhoneValue = useCallback((): string => {
     if (phoneCode && phoneNumber) {
       return `${phoneCode}${phoneNumber}`;
     }
@@ -30,19 +33,23 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
       return phoneCode;
     }
     return '';
-  };
+  }, [phoneCode, phoneNumber]);
 
-  const [value, setValue] = useState<string>(getFullPhoneValue());
-  const isInternalUpdate = useRef(false);
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  
-  // Функция для получения input элемента
-  const getInputElement = (): HTMLInputElement | null => {
-    if (wrapperRef.current) {
-      return wrapperRef.current.querySelector('input.PhoneInputInput') as HTMLInputElement | null;
+  // Инициализируем значение с учетом текущих props
+  const [value, setValue] = useState<string>(() => {
+    if (phoneCode && phoneNumber) {
+      return `${phoneCode}${phoneNumber}`;
     }
-    return null;
-  };
+    if (phoneCode) {
+      return phoneCode;
+    }
+    return '';
+  });
+
+  // Получаем input элемент
+  const getInputElement = useCallback((): HTMLInputElement | null => {
+    return wrapperRef.current?.querySelector('input.PhoneInputInput') as HTMLInputElement | null;
+  }, []);
 
   // Синхронизируем value с phoneCode и phoneNumber только если изменения пришли извне
   useEffect(() => {
@@ -51,35 +58,38 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
       setValue(newValue);
     }
     isInternalUpdate.current = false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phoneCode, phoneNumber]);
+  }, [getFullPhoneValue]);
 
-  const handleChange = (phoneValue: string | undefined) => {
+  // Обработка изменения номера телефона
+  const handleChange = useCallback((phoneValue: string | undefined) => {
     isInternalUpdate.current = true;
     
+    // Очистка поля
     if (!phoneValue || phoneValue.trim() === '') {
-      // При полной очистке сохраняем код страны, очищаем только номер
       setValue(phoneCode || '');
       onPhoneNumberChange('');
       return;
     }
 
-    // Защита от удаления кода страны - если код был удален, восстанавливаем его
+    // Защита от удаления кода страны
     const codeMatch = phoneValue.match(/^(\+\d{1,4})/);
+    let workingValue = phoneValue;
+    
     if (phoneCode && !codeMatch) {
-      // Если код страны был удален, восстанавливаем его
-      const restoredValue = `${phoneCode}${phoneValue.replace(/\D/g, '')}`;
-      setValue(restoredValue);
-      phoneValue = restoredValue;
+      // Восстанавливаем код страны, если он был удален
+      const digitsOnly = phoneValue.replace(/\D/g, '');
+      workingValue = `${phoneCode}${digitsOnly}`;
+      setValue(workingValue);
     }
 
     try {
-      // Пытаемся распарсить номер
-      const parsedPhone = parsePhoneNumber(phoneValue);
+      // Парсим номер телефона
+      const parsedPhone = parsePhoneNumber(workingValue);
       
       if (parsedPhone) {
-        // Если номер распарсился, извлекаем код страны и национальный номер
-        const countryCode = parsedPhone.countryCallingCode ? `+${parsedPhone.countryCallingCode}` : phoneCode;
+        const countryCode = parsedPhone.countryCallingCode 
+          ? `+${parsedPhone.countryCallingCode}` 
+          : phoneCode;
         let nationalNumber = parsedPhone.nationalNumber || '';
         
         // Ограничиваем длину номера
@@ -91,26 +101,27 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         onPhoneNumberChange(nationalNumber);
         setValue(`${countryCode}${nationalNumber}`);
       } else {
-        // Если не удалось распарсить, пытаемся извлечь код вручную
-        const extractedCode = codeMatch ? codeMatch[1] : phoneCode;
-        let restOfNumber = phoneValue.substring(extractedCode.length).replace(/\D/g, '');
+        // Если не удалось распарсить, извлекаем код вручную
+        const extractedCode = codeMatch ? codeMatch[1] : phoneCode || '';
+        let restOfNumber = workingValue.substring(extractedCode.length).replace(/\D/g, '');
         
         // Ограничиваем длину номера
         if (restOfNumber.length > MAX_PHONE_LENGTH) {
           restOfNumber = restOfNumber.substring(0, MAX_PHONE_LENGTH);
         }
         
-        onPhoneCodeChange(extractedCode);
-        onPhoneNumberChange(restOfNumber);
-        setValue(`${extractedCode}${restOfNumber}`);
+        if (extractedCode) {
+          onPhoneCodeChange(extractedCode);
+          onPhoneNumberChange(restOfNumber);
+          setValue(`${extractedCode}${restOfNumber}`);
+        }
       }
     } catch (error) {
       console.warn('Error parsing phone:', error);
-      // При ошибке парсинга пытаемся извлечь вручную
-      const extractedCode = codeMatch ? codeMatch[1] : phoneCode;
-      let restOfNumber = phoneValue.substring(extractedCode ? extractedCode.length : 0).replace(/\D/g, '');
+      // При ошибке парсинга извлекаем код вручную
+      const extractedCode = codeMatch ? codeMatch[1] : phoneCode || '';
+      let restOfNumber = workingValue.substring(extractedCode.length).replace(/\D/g, '');
       
-      // Ограничиваем длину номера
       if (restOfNumber.length > MAX_PHONE_LENGTH) {
         restOfNumber = restOfNumber.substring(0, MAX_PHONE_LENGTH);
       }
@@ -125,58 +136,54 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     // Устанавливаем курсор после кода страны
     setTimeout(() => {
       const input = getInputElement();
-      if (input && phoneCode) {
-        const codeLength = phoneCode.length;
-        input.setSelectionRange(codeLength, codeLength);
-      }
-    }, 0);
-  };
-
-  // Добавляем обработчики событий через useEffect
-  useEffect(() => {
-    const input = wrapperRef.current?.querySelector('input.PhoneInputInput') as HTMLInputElement | null;
-    if (input && phoneCode) {
-      const codeLength = phoneCode.length;
-      
-      const keyDownHandler = (e: KeyboardEvent) => {
-        const selectionStart = input.selectionStart || 0;
-        
-        // Если курсор находится в области кода страны и нажата Backspace или Delete
-        if (selectionStart < codeLength) {
-          if (e.key === 'Backspace' || e.key === 'Delete') {
-            e.preventDefault();
-            input.setSelectionRange(codeLength, codeLength);
-          }
-        }
-        
-        // Если пытаются выделить и удалить код страны
-        const selectionEnd = input.selectionEnd || 0;
-        if (selectionStart < codeLength && selectionEnd <= codeLength) {
-          if (e.key === 'Backspace' || e.key === 'Delete') {
-            e.preventDefault();
-            input.setSelectionRange(codeLength, codeLength);
-          }
-        }
-      };
-
-      const focusHandler = () => {
-        setTimeout(() => {
+      if (input) {
+        const currentCode = codeMatch ? codeMatch[1] : phoneCode;
+        if (currentCode) {
+          const codeLength = currentCode.length;
           const currentPosition = input.selectionStart || 0;
           if (currentPosition < codeLength) {
             input.setSelectionRange(codeLength, codeLength);
           }
-        }, 0);
-      };
+        }
+      }
+    }, 0);
+  }, [phoneCode, onPhoneCodeChange, onPhoneNumberChange, getInputElement]);
 
-      input.addEventListener('keydown', keyDownHandler);
-      input.addEventListener('focus', focusHandler);
+  // Защита от удаления кода страны через клавиатуру
+  useEffect(() => {
+    const input = getInputElement();
+    if (!input || !phoneCode) return;
 
-      return () => {
-        input.removeEventListener('keydown', keyDownHandler);
-        input.removeEventListener('focus', focusHandler);
-      };
-    }
-  }, [phoneCode, value]);
+    const codeLength = phoneCode.length;
+    
+    const keyDownHandler = (e: KeyboardEvent) => {
+      const selectionStart = input.selectionStart || 0;
+      const selectionEnd = input.selectionEnd || 0;
+      
+      // Предотвращаем удаление кода страны
+      if (selectionStart < codeLength && (e.key === 'Backspace' || e.key === 'Delete')) {
+        e.preventDefault();
+        input.setSelectionRange(codeLength, codeLength);
+      }
+    };
+
+    const focusHandler = () => {
+      setTimeout(() => {
+        const currentPosition = input.selectionStart || 0;
+        if (currentPosition < codeLength) {
+          input.setSelectionRange(codeLength, codeLength);
+        }
+      }, 0);
+    };
+
+    input.addEventListener('keydown', keyDownHandler);
+    input.addEventListener('focus', focusHandler);
+
+    return () => {
+      input.removeEventListener('keydown', keyDownHandler);
+      input.removeEventListener('focus', focusHandler);
+    };
+  }, [phoneCode, getInputElement]);
 
   return (
     <div className="phone-input">
