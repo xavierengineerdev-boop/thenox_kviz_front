@@ -4,7 +4,7 @@ import { QuizContextType, QuizData } from '../types';
 const initialData: QuizData = {
   name: '',
   phone: '',
-  phoneCode: '+41',
+  phoneCode: '',
   email: '',
   readiness: '',
   motivation: '',

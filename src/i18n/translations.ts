@@ -44,7 +44,7 @@ export const translations = {
         emailPlaceholder: 'Почта',
         errors: {
           name: 'Введите имя',
-          phone: 'Введите телефон',
+          phone: 'Введите корректный номер телефона',
           email: 'Введите корректный email',
         },
       },
@@ -102,7 +102,7 @@ export const translations = {
         emailPlaceholder: 'Email',
         errors: {
           name: 'Enter your name',
-          phone: 'Enter your phone',
+          phone: 'Enter a valid phone number',
           email: 'Enter a valid email',
         },
       },

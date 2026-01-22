@@ -1,5 +1,6 @@
 import React, { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { parsePhoneNumber } from 'react-phone-number-input';
 import { BackButton } from '../../components/BackButton';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
@@ -25,6 +26,7 @@ export const QuizSlider: React.FC = () => {
   const { t } = useLanguage();
   const [errors, setErrors] = useState<string[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
+  const [phoneError, setPhoneError] = useState<string>('');
 
   useEffect(() => {
     logPageView();
@@ -41,6 +43,47 @@ export const QuizSlider: React.FC = () => {
     }
   }, [slideIndex]);
 
+  // Валидация телефона в реальном времени
+  useEffect(() => {
+    if (slideIndex === 3) {
+      // Если нет кода страны или номера, не показываем ошибку (пользователь еще вводит)
+      if (!data.phoneCode && !data.phone.trim()) {
+        setPhoneError('');
+        return;
+      }
+
+      // Если есть код страны, но нет номера - не показываем ошибку пока пользователь вводит
+      if (data.phoneCode && !data.phone.trim()) {
+        setPhoneError('');
+        return;
+      }
+
+      // Если есть номер, но нет кода страны - показываем ошибку
+      if (data.phone.trim() && !data.phoneCode) {
+        setPhoneError(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
+        return;
+      }
+
+      // Если есть и код, и номер - валидируем
+      if (data.phoneCode && data.phone.trim()) {
+        try {
+          const fullPhone = `${data.phoneCode}${data.phone}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
+          const parsedPhone = parsePhoneNumber(fullPhone);
+          
+          if (!parsedPhone || !parsedPhone.isValid()) {
+            setPhoneError(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
+          } else {
+            setPhoneError('');
+          }
+        } catch (error) {
+          setPhoneError(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
+        }
+      }
+    } else {
+      setPhoneError('');
+    }
+  }, [data.phone, data.phoneCode, slideIndex, t]);
+
   const handleNext = () => {
     if (slideIndex === 0 && !data.capital) return;
     if (slideIndex === 1 && !data.motivation) return;
@@ -50,12 +93,27 @@ export const QuizSlider: React.FC = () => {
       const newErrors: string[] = [];
       if (!data.name.trim()) newErrors.push(t.quiz.contact.errors.name);
       
-      // Мягкая валидация телефона - только проверяем, что номер введен
-      if (!data.phone.trim()) {
+      // Валидация телефона с использованием parsePhoneNumber
+      if (!data.phoneCode || !data.phone.trim()) {
         newErrors.push(t.quiz.contact.errors.phone);
-      } else if (data.phone.trim().length < 5) {
-        // Минимальная проверка - хотя бы 5 цифр
-        newErrors.push(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
+      } else {
+        try {
+          // Форматируем телефон: убираем все пробелы и нецифровые символы кроме +
+          const fullPhone = `${data.phoneCode}${data.phone}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
+          const parsedPhone = parsePhoneNumber(fullPhone);
+          
+          if (!parsedPhone || !parsedPhone.isValid()) {
+            newErrors.push(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
+          }
+        } catch (error) {
+          // Если не удалось распарсить номер, считаем его невалидным
+          newErrors.push(t.quiz.contact.errors.phone || 'Некорректный номер телефона');
+        }
+      }
+
+      // Если есть ошибка телефона из валидации в реальном времени, добавляем её в общий список
+      if (phoneError && !newErrors.includes(phoneError)) {
+        newErrors.push(phoneError);
       }
       
       if (!data.email.trim() || !data.email.includes('@'))
@@ -67,10 +125,24 @@ export const QuizSlider: React.FC = () => {
         return;
       }
       setErrors([]);
+      setPhoneError('');
 
-      // Форматируем телефон: убираем пробелы и лишние символы
-      const fullPhone = `${data.phoneCode}${data.phone}`.replace(/\s/g, '');
-      const formattedPhone = fullPhone.replace(/[^\d+]/g, '');
+      // Форматируем телефон для отправки: используем parsePhoneNumber для правильного формата
+      let formattedPhone = '';
+      try {
+        const fullPhone = `${data.phoneCode}${data.phone}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
+        const parsedPhone = parsePhoneNumber(fullPhone);
+        if (parsedPhone && parsedPhone.isValid()) {
+          // Используем E.164 формат (международный формат)
+          formattedPhone = parsedPhone.format('E.164');
+        } else {
+          // Если не удалось распарсить, используем простое форматирование
+          formattedPhone = fullPhone;
+        }
+      } catch (error) {
+        // При ошибке используем простое форматирование
+        formattedPhone = `${data.phoneCode}${data.phone}`.replace(/\s/g, '').replace(/[^\d+]/g, '');
+      }
       
       console.log('Form data before sending:', {
         name: data.name,
@@ -213,6 +285,7 @@ export const QuizSlider: React.FC = () => {
                   phoneNumber={data.phone}
                   onPhoneCodeChange={(value) => updateData('phoneCode', value)}
                   onPhoneNumberChange={(value) => updateData('phone', value)}
+                  error={phoneError}
                 />
 
                 <Input
