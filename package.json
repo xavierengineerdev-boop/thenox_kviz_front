@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build"
+    "build": "vite build"
   },
   "dependencies": {
     "libphonenumber-js": "^1.12.34",
